@@ -24,11 +24,6 @@ services:
         - "9901:9901"
     volumes:
       - $REPO_DIR:$REPO_DIR_IN_DOCKER
-    networks:
-      default:
-        ipv4_address: 192.170.0.8
-    extra_hosts:
-      - $DB_HOSTNAME:192.170.0.2
 
 networks:
   default:
