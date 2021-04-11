@@ -40,6 +40,9 @@ RUN apt-get update && apt-get install -y \
     php7.4-msgpack \
     php7.4-gd;
 
+RUN apt-get update && apt-get install -y \
+    php7.4-zmq;
+
 RUN apt-get -y autoremove; \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*;
@@ -87,53 +90,3 @@ ARG REPO_DIR_IN_DOCKER
 RUN mkdir $REPO_DIR_IN_DOCKER
 
 WORKDIR $REPO_DIR_IN_DOCKER
-
-#####################################################
-# BUILD                                             #
-# from dev just so we can run composer install, etc #
-#####################################################
-FROM dev as build
-ARG APP_NAME
-ARG SSH_PRIVATE_KEY
-
-# to be able to run git clone
-RUN apt-get update && apt-get install -y \
-    git ssh;
-
-USER developer
-RUN mkdir ~/.ssh; \
-    echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa; \
-    chmod 600 ~/.ssh/id_rsa; \
-    touch ~/.ssh/known_hosts; \
-    ssh-keyscan github.com >> ~/.ssh/known_hosts;
-
-ARG CACHEBUST=1
-RUN cd ~; \
-    git clone git@github.com:katzda/$APP_NAME.git app; \
-    cd app/web; \
-    cp ~/.env .; \
-    composer install --no-ansi --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader;
-
-RUN cd ~/app/web; \
-    npm install --production \
-    npm run prod;
-
-########
-# PROD #
-########
-FROM base as prod
-
-ARG URL
-
-USER developer
-COPY --from=build /home/developer/app/web /var/www/$URL
-
-USER root
-RUN chown -R root storage bootstrap/cache; \
-    find . -type d -exec chmod 555 -- {} +; \
-    # these are restrected only because it otherwise takes forever. But I could enable it for prod but maybe not for QA
-    find . -not -path "*/node_modules/*" -not -path "*/vendor/*" -type f -exec chmod 444 -- {} +; \
-    find storage -type f -exec chmod 664 -- {} +; \
-    find storage -type d -exec chmod 775 -- {} +; \
-    find bootstrap/cache -type f -exec chmod 664 -- {} +; \
-    find bootstrap/cache -type d -exec chmod 775 -- {} +;
