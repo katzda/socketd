@@ -1,0 +1,36 @@
+version: '3.9'
+
+services:
+  websocket:
+    container_name: $APP_NAME
+    build:
+      context: "."
+      dockerfile: "Dockerfile"
+      target: dev
+      args:
+        - HOST_UID
+        - HOST_GID
+        - HOST_IP
+        - APP_NAME
+        - URL
+        - DB_HOSTNAME
+        - PATH_TO_CERT_IN_DOCKER
+        - PATH_TO_CERT_IN_DOCKER_ESC
+        - REPO_DIR_IN_DOCKER
+    image: img_${APP_NAME}
+    command: php src/index.php
+    ports:
+        - "8080:8080"
+        - "9901:9901"
+    volumes:
+      - $REPO_DIR:$REPO_DIR_IN_DOCKER
+    networks:
+      default:
+        ipv4_address: 192.170.0.8
+    extra_hosts:
+      - $DB_HOSTNAME:192.170.0.2
+
+networks:
+  default:
+    external:
+      name: docker_backend

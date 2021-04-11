@@ -1,0 +1,83 @@
+#!/bin/bash
+#these shouldn't change very often
+APP_NAME="chitchat";
+URL_ENDING_PROD=.co.uk
+URL_ENDING_DEV=.dev.co.uk
+APP_DEBUG="true";
+APP_ENV="DEV";
+PATH_TO_CERT="/var/certs";
+PATH_TO_LIBS="/var/tmp";
+SSH_PRIVATE_KEY="id_rsa"
+ONLY_CERT=false;
+ONLY_CERT_SECS=30;
+
+
+
+###################
+##DEFAULT VALUES:##
+###################
+
+FORCE_REGENERATE_SELF_SIGNED_CERT=false;
+CLEAR_STORAGE_DIR=false;
+CONFIG_FILE_PATH_PROVIDED=false;
+VOLUMES=false;
+UNINSTALL=false;
+SKIP_COMPOSER_NPM_INSTALL=false;
+IMAGES=false;
+IS_CACHE=true;
+URL_ENDING=$URL_ENDING_DEV
+SSH_PRIVATE_KEY="id_rsa"
+
+
+function showHelp()
+{
+    HELP_TEXT="
+    DEV OPTIONS (lowercase flags)\n
+    \n-c | --clear-storage-dir: \tClear storage dir from cache, sessions,
+    \n-f | --force-selfsigned: \tForce regenerate self-signed certificate
+    \n-h | --help: \t\t\tShow this help text
+    \n-i | --images-delete-too: \tDelete all docker images as well (so they will have to be recreated from scratch again)
+    \n-p | --path-to-install-dir: \t= \"$INSTALL_DIR\", or provide a custom value, or modify in the \"./configs/base\" file
+    \n-s | --skip-post-install-steps: Will skip composer install and npm install (useful if you are working on docker file and dont want to wait for these irrelevant install steps)
+    \n-u | --uninstall-only: \t\tThis will literally just prevent 'docker-compose up' being called.
+    \n-v | --volumes-delete-too: \tThis will delete the database data - don't use in prod!
+    \n\nPROD SETTINGS (capital flags)
+    \n-C | --config-file-path: \tProvide an absolute path to the 'custom' file.
+    \n-P | --production-env: \t\tInstall with production environment settings.
+    \n-K | --app-key: \t\tLaravel application key, e.g base64:someappkeyveryveryverylongstring=
+    \n-S | --slack-webhook: \t\te.g. https://hooks.slack.com/services/VeryVeryVeryVeryVeryLongUrlKey
+    \n-U | --db-user: \t\tdatabase username
+    \n-W | --db-password: \t\tdatabase password
+    \n-X | --preserve-docker-cache: \tIn dockerfile->build stage->Will try to not stop the natural caching during building of the prod image. Not caching by default.
+    \n-Z | --only-cert: \t\tThis option only generates or renews a prod Lets-Encrypt certificate.\n\t\t\t\tProvide a path to the digital ocean credentials file and a delay in secs, eg -Z \$(pwd)/../myfile.ini 50
+    \n";
+
+    while [ "$1" != "" ]; do
+        case $1 in
+            -c | --clear-storage-dir ) CLEAR_STORAGE_DIR=true;;
+            -f | --force-selfsigned ) FORCE_REGENERATE_SELF_SIGNED_CERT=true;;
+            -h | --help ) echo -e $HELP_TEXT; exit;;
+            -i | --images-delete-too ) IMAGES=true;;
+            -p | --path-to-install-dir ) shift; INSTALL_DIR=$1;;
+            -s | --skip-post-install-steps ) SKIP_COMPOSER_NPM_INSTALL=true;;
+            -u | --uninstall-only ) UNINSTALL=true;;
+            -v | --volumes-delete-too ) VOLUMES=true;;
+            -C | --path-to-config ) shift;
+                                    CONFIG_FILE_PATH="$1";;
+            -P | --production-env ) APP_DEBUG="false";
+                                    APP_ENV="PROD";
+                                    URL_ENDING=$URL_ENDING_PROD;;
+            -K | --app-key ) shift; APP_KEY=$1;;
+            -S | --slack-webhook ) shift; LOG_SLACK_WEBHOOK_URL=$1;;
+            -U | --db-user ) shift; POSTGRES_USER=$1;;
+            -W | --db-password ) shift; POSTGRES_PASSWORD=$1;;
+            -X | --preserve-docker-cache ) IS_CACHE="false";;
+            -Z | --only-cert ) shift;
+                               ONLY_CERT=$1;
+                               shift;
+                               ONLY_CERT_SECS=$1;;
+            * ) echo -e $HELP_TEXT; exit 1;;
+        esac
+        shift
+    done
+}

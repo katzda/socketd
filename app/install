@@ -1,0 +1,69 @@
+#!/bin/bash
+
+. base
+
+showHelp $@;
+
+export FORCE_REGENERATE_SELF_SIGNED_CERT=$FORCE_REGENERATE_SELF_SIGNED_CERT;
+export VOLUMES=$VOLUMES;
+export UNINSTALL=$UNINSTALL;
+export IMAGES=$IMAGES;
+export IS_DEV_ENV=$IS_DEV_ENV;
+export ONLY_CERT=$ONLY_CERT;
+
+export REPO_DIR=/home/katzda/documents/chitchat/app;
+export APP_ENV=$APP_ENV;
+export APP_DEBUG=$APP_DEBUG;
+export APP_NAME="$APP_NAME";
+export URL=${APP_NAME}${URL_ENDING}
+export CERT_NAME="$URL-$APP_ENV";
+export REPO_DIR_IN_DOCKER="/var/www/$URL";
+ONLY_CERT_SECS=$ONLY_CERT_SECS;
+
+
+export DB_HOSTNAME="db_${APP_NAME}";
+
+export HOST_UID=$UID;
+export HOST_GID=$(id -g $USER);
+export HOST_IP=$HOST_IP
+
+export PATH_TO_LIBS=$PATH_TO_LIBS;
+export PATH_TO_CERT=$PATH_TO_CERT;
+export PATH_TO_CERT_IN_DOCKER="/etc/letsencrypt/live/${APP_NAME}${URL_ENDING}";
+export PATH_TO_CERT_IN_DOCKER_ESC=$(echo "$PATH_TO_CERT_IN_DOCKER" | sed -E "s/\//\\\\\//g");
+
+export APP_KEY=$(echo "$APP_KEY" | sed -E "s/\//\\\\\//g");
+export SSH_PRIVATE_KEY=$(cat ~/.ssh/$SSH_PRIVATE_KEY);
+export IS_CACHE=$IS_CACHE;
+[[ $IS_CACHE = true ]] && export CACHEBUST=$(date +%s);
+
+PostInstallationSteps(){
+    docker exec -u developer $APP_NAME bash -c '
+        composer install;
+        npm install;
+        npm run dev;
+    ';
+}
+
+if [[ $ONLY_CERT = false ]]; then # if the purpose of running install script is NOT to just generate a new prod certificate
+    [[ $VOLUMES = true ]] && options+="--volumes";
+    [[ $IMAGES = true ]] && options+="--rmi all";
+    docker-compose down ${options[@]};
+
+    if [[ $UNINSTALL = false ]]; then
+        if [[ $APP_ENV = "PROD" ]]; then composefile+="docker-compose-prod.yml";
+                                    else composefile+="docker-compose.yml";
+        fi;
+
+        docker-compose -f ${composefile[@]} up -d --build;
+
+        if [[ $APP_ENV = "DEV" ]]; then
+            if [[ $SKIP_COMPOSER_NPM_INSTALL = false ]]; then
+                echo "";
+                #PostInstallationSteps;
+            fi;
+        fi;
+
+        echo -e "$(hostname -I)" | sed -E "s/^([^ ]+).*$/\nFinished!\nHost entry: \"\1 $URL\"/";
+    fi;
+fi;
