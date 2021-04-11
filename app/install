@@ -11,15 +11,13 @@ export IMAGES=$IMAGES;
 export IS_DEV_ENV=$IS_DEV_ENV;
 export ONLY_CERT=$ONLY_CERT;
 
-export REPO_DIR=/home/katzda/documents/chitchat/app;
+export REPO_DIR=~/documents/chitchat/app;
 export APP_ENV=$APP_ENV;
 export APP_DEBUG=$APP_DEBUG;
 export APP_NAME="$APP_NAME";
 export URL=${APP_NAME}${URL_ENDING}
 export CERT_NAME="$URL-$APP_ENV";
 export REPO_DIR_IN_DOCKER="/var/www/$URL";
-ONLY_CERT_SECS=$ONLY_CERT_SECS;
-
 
 export DB_HOSTNAME="db_${APP_NAME}";
 
@@ -45,25 +43,23 @@ PostInstallationSteps(){
     ';
 }
 
-if [[ $ONLY_CERT = false ]]; then # if the purpose of running install script is NOT to just generate a new prod certificate
-    [[ $VOLUMES = true ]] && options+="--volumes";
-    [[ $IMAGES = true ]] && options+="--rmi all";
-    docker-compose down ${options[@]};
+[[ $VOLUMES = true ]] && options+="--volumes";
+[[ $IMAGES = true ]] && options+="--rmi all";
+docker-compose down ${options[@]};
 
-    if [[ $UNINSTALL = false ]]; then
-        if [[ $APP_ENV = "PROD" ]]; then composefile+="docker-compose-prod.yml";
-                                    else composefile+="docker-compose.yml";
-        fi;
-
-        docker-compose -f ${composefile[@]} up -d --build;
-
-        if [[ $APP_ENV = "DEV" ]]; then
-            if [[ $SKIP_COMPOSER_NPM_INSTALL = false ]]; then
-                echo "";
-                #PostInstallationSteps;
-            fi;
-        fi;
-
-        echo -e "$(hostname -I)" | sed -E "s/^([^ ]+).*$/\nFinished!\nHost entry: \"\1 $URL\"/";
+if [[ $UNINSTALL = false ]]; then
+    if [[ $APP_ENV = "PROD" ]]; then composefile+="docker-compose-prod.yml";
+                                else composefile+="docker-compose.yml";
     fi;
+
+    docker-compose -f ${composefile[@]} up -d --build;
+
+    if [[ $APP_ENV = "DEV" ]]; then
+        if [[ $SKIP_COMPOSER_NPM_INSTALL = false ]]; then
+            echo "";
+            #PostInstallationSteps;
+        fi;
+    fi;
+
+    echo -e "$(hostname -I)" | sed -E "s/^([^ ]+).*$/\nFinished!\nHost entry: \"\1 $URL\"/";
 fi;

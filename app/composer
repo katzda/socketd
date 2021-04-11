@@ -1,0 +1,3 @@
+#!/bin/bash
+
+docker exec -it -u developer web_bookhaircut composer "${@:1}"

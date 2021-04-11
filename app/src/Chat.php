@@ -1,5 +1,6 @@
 <?php
-namespace MyApp;
+
+namespace Socketd;
 use Ratchet\MessageComponentInterface;
 use Ratchet\ConnectionInterface;
 
